@@ -67,4 +67,57 @@ struct CodeObject : public Object
 #define IS_STRING(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::STRING)
 #define IS_CODE(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::CODE)
 
+std::string xpValueToTypeString(const XPValue &value)
+{
+    if (IS_NUMBER(value))
+    {
+        return "NUMBER";
+    }
+    else if (IS_STRING(value))
+    {
+        return "STRING";
+    }
+    else if (IS_CODE(value))
+    {
+        return "CODE";
+    }
+    else
+    {
+        DIE << "xpValueToTypeString unknown type: " << (int)value.type;
+    }
+    return "";
+}
+
+std::string xpValueToConstantString(const XPValue &value)
+{
+    std::stringstream ss;
+
+    if (IS_NUMBER(value))
+    {
+        ss << value.number;
+    }
+    else if (IS_STRING(value))
+    {
+        ss << '"' << AS_CPPSTRING(value) << '"';
+    }
+    else if (IS_CODE(value))
+    {
+        auto code = AS_CODE(value);
+        ss << "code " << code << ": " << code->name;
+    }
+    else
+    {
+        DIE << "xpValueToConstantString unknown value: " << (int)value.type;
+    }
+
+    return ss.str();
+}
+
+std::ostream &operator<<(std::ostream &os, const XPValue &xpValue)
+{
+    return os << "XPValue ("
+              << xpValueToTypeString(xpValue)
+              << "): " << xpValueToConstantString(xpValue);
+}
+
 #endif

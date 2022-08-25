@@ -9,11 +9,11 @@ int main(int argc, char const *argv[])
 
     auto result = vm.exec(R"(
 
-        55555
+        (+ 1 (+ 5 4))
 
     )");
 
-    log(AS_NUMBER(result));
+    log(result);
 
     std::cout << "All Done!\n";
 
