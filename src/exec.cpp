@@ -1,8 +1,7 @@
-#include "vm/xp.h"
-#include "./Logger.h"
-#include "./vm/XPValue.h"
-
 #include <iostream>
+#include "./Logger.h"
+#include "vm/xp.h"
+#include "./vm/XPValue.h"
 
 int main(int argc, char const *argv[])
 {
@@ -10,11 +9,11 @@ int main(int argc, char const *argv[])
 
     auto result = vm.exec(R"(
 
-        42
+        (+ "hello" "world")
 
     )");
 
-    log(AS_NUMBER(result));
+    log(AS_CPPSTRING(result));
 
     std::cout << "All Done!\n";
 

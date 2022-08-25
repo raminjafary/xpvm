@@ -6,9 +6,12 @@
 #include <string>
 #include <vector>
 
-#include "./XPValue.h"
 #include "../Logger.h"
 #include "../bytecode/OpCode.h"
+#include "../parser/XPParser.h"
+#include "XPValue.h"
+
+using syntax::XPParser;
 
 #define READ_BYTE() *ip++
 
@@ -27,7 +30,7 @@
 class XPVM
 {
 public:
-    void xpVM() {}
+    XPVM() : parser(std::make_unique<XPParser>()) {}
 
     void push(const XPValue &value)
     {
@@ -50,13 +53,14 @@ public:
     }
 
     XPValue exec(const std::string &program)
+
     {
+        auto ast = parser->parse(program);
 
-        constants.push_back(NUMBER(6));
-        constants.push_back(NUMBER(5));
-        constants.push_back(NUMBER(10));
+        constants.push_back(ALLOC_STRING("hello, "));
+        constants.push_back(ALLOC_STRING("worldd!"));
 
-        code = {OP_CONST, 0, OP_CONST, 1, OP_SUB, OP_CONST, 2, OP_ADD, OP_HALT};
+        code = {OP_CONST, 0, OP_CONST, 1, OP_ADD, OP_HALT};
 
         ip = &code[0];
 
@@ -83,8 +87,23 @@ public:
                 break;
 
             case OP_ADD:
-                BINARY_OP(+);
+            {
+                auto op2 = pop();
+                auto op1 = pop();
+
+                if (IS_NUMBER(op1) && IS_NUMBER(op2))
+                {
+                    push(NUMBER(AS_NUMBER(op1) + AS_NUMBER(op2)));
+                }
+                else if (IS_STRING(op1) && IS_STRING(op2))
+                {
+                    auto s1 = AS_CPPSTRING(op1);
+                    auto s2 = AS_CPPSTRING(op2);
+                    push(ALLOC_STRING(s1 + s2));
+                }
                 break;
+            }
+
             case OP_DIV:
                 BINARY_OP(/);
                 break;
@@ -103,6 +122,8 @@ public:
     uint8_t *ip;
 
     XPValue *sp;
+
+    std::unique_ptr<XPParser> parser;
 
     std::array<XPValue, STACK_LIMIT> stack;
 
