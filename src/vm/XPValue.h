@@ -10,7 +10,8 @@ enum class XPValueType
 
 enum class ObjectType
 {
-    STRING
+    STRING,
+    CODE
 };
 
 struct Object
@@ -35,14 +36,26 @@ struct XPValue
     };
 };
 
+struct CodeObject : public Object
+{
+    CodeObject(const std::string &name) : Object(ObjectType::CODE), name(name) {}
+
+    std::string name;
+    std::vector<uint8_t> code;
+    std::vector<XPValue> constants;
+};
+
 #define NUMBER(value) ((XPValue){XPValueType::NUMBER, .number = value})
 #define ALLOC_STRING(value) \
     ((XPValue){XPValueType::OBJECT, .object = (Object *)new StringObject(value)})
+#define ALLOC_CODE(name) \
+    ((XPValue){XPValueType::OBJECT, .object = (Object *)new CodeObject(name)})
 
 #define AS_NUMBER(xPValue) ((double)(xPValue).number)
 #define AS_OBJECT(xPValue) ((Object *)(xPValue).object)
 
 #define AS_STRING(xPValue) ((StringObject *)(xPValue).object)
+#define AS_CODE(xPValue) ((CodeObject *)(xPValue).object)
 #define AS_CPPSTRING(xPValue) (AS_STRING(xPValue)->string)
 
 #define IS_NUMBER(xpValue) ((xpValue).type == XPValueType::NUMBER)
@@ -52,5 +65,6 @@ struct XPValue
     (IS_OBJECT(xpValue) && AS_OBJECT(xpValue)->type == objectType)
 
 #define IS_STRING(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::STRING)
+#define IS_CODE(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::CODE)
 
 #endif

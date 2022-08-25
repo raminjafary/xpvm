@@ -9,6 +9,7 @@
 #include "../Logger.h"
 #include "../bytecode/OpCode.h"
 #include "../parser/XPParser.h"
+#include "../compiler/XPCompiler.h"
 #include "XPValue.h"
 
 using syntax::XPParser;
@@ -17,7 +18,7 @@ using syntax::XPParser;
 
 #define STACK_LIMIT 512
 
-#define GET_CONST() constants[READ_BYTE()]
+#define GET_CONST() co->constants[READ_BYTE()]
 
 #define BINARY_OP(op)                \
     do                               \
@@ -30,7 +31,8 @@ using syntax::XPParser;
 class XPVM
 {
 public:
-    XPVM() : parser(std::make_unique<XPParser>()) {}
+    XPVM() : parser(std::make_unique<XPParser>()),
+             compiler(std::make_unique<XPCompiler>()) {}
 
     void push(const XPValue &value)
     {
@@ -57,12 +59,9 @@ public:
     {
         auto ast = parser->parse(program);
 
-        constants.push_back(ALLOC_STRING("hello, "));
-        constants.push_back(ALLOC_STRING("worldd!"));
+        co = compiler->compile(ast);
 
-        code = {OP_CONST, 0, OP_CONST, 1, OP_ADD, OP_HALT};
-
-        ip = &code[0];
+        ip = &co->code[0];
 
         sp = &stack[0];
 
@@ -124,12 +123,11 @@ public:
     XPValue *sp;
 
     std::unique_ptr<XPParser> parser;
+    std::unique_ptr<XPCompiler> compiler;
 
     std::array<XPValue, STACK_LIMIT> stack;
 
-    std::vector<XPValue> constants;
-
-    std::vector<uint8_t> code;
+    CodeObject *co;
 };
 
 #endif
