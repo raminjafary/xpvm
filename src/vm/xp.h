@@ -20,6 +20,10 @@ using syntax::XPParser;
 
 #define GET_CONST() co->constants[READ_BYTE()]
 
+#define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
+
+#define TO_ADDRESS(index) (&co->code[index])
+
 #define BINARY_OP(op)                \
     do                               \
     {                                \
@@ -158,6 +162,22 @@ public:
                 break;
             }
 
+            case OP_JMP_IF_FALSE:
+            {
+
+                auto cond = AS_BOOLEAN(pop());
+
+                auto address = READ_SHORT();
+
+                if (!cond)
+                {
+                    ip = TO_ADDRESS(address);
+                }
+                break;
+            }
+            case OP_JMP:
+                ip = TO_ADDRESS(READ_SHORT());
+                break;
             default:
                 DIE << "Unknown opcode: " << std::hex << int(opcode);
             }

@@ -12,7 +12,8 @@ int main(int argc, char const *argv[])
         // (+ 1 (+ 5 4))
         // true
         // false
-        (< 5 6)
+        // (< 5 6)
+        (if (< 5 10) 1 2)
 
     )");
 
