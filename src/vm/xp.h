@@ -97,6 +97,8 @@ public:
 
         sp = &stack[0];
 
+        compiler->disassembleByteCode();
+
         return eval();
     }
 

@@ -13,9 +13,13 @@ int main(int argc, char const *argv[])
         // true
         // false
         // (< 5 6)
-        (if (< 5 10) 1 2)
+        (if (> 5 10) 1 2)
+        // 10
+        // (+ 5 2)
 
     )");
+
+    std::cout << "\n";
 
     log(result);
 

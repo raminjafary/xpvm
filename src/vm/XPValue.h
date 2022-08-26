@@ -1,6 +1,9 @@
 #ifndef __XPVvalue_h
 #define __XPVvalue_h
+
 #include <string>
+#include <vector>
+#include "../Logger.h"
 
 enum class XPValueType
 {

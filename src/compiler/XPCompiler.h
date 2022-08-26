@@ -5,6 +5,7 @@
 #include <map>
 #include "../vm/XPValue.h"
 #include "../bytecode/OpCode.h"
+#include "../disassembler/disassembler.h"
 
 #define ALLOC_CONST(tester, convertor, allocator, value) \
     do                                                   \
@@ -34,7 +35,7 @@
 class XPCompiler
 {
 public:
-    XPCompiler() {}
+    XPCompiler() : disassembler(std::make_unique<Disassembler>()) {}
 
     CodeObject *compile(const Exp &exp)
     {
@@ -138,7 +139,13 @@ public:
         }
     }
 
+    void disassembleByteCode()
+    {
+        disassembler->disassemble(co);
+    }
+
 private:
+    std::unique_ptr<Disassembler> disassembler;
     size_t getOffset()
     {
         return co->code.size();
