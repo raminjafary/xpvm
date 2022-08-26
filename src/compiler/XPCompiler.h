@@ -1,6 +1,8 @@
 #ifndef __XP_Compiler_h
 #define __XP_Compiler_h
 
+#include <string>
+#include <map>
 #include "../vm/XPValue.h"
 #include "../bytecode/OpCode.h"
 
@@ -57,6 +59,14 @@ public:
             break;
 
         case ExpType::SYMBOL:
+            if (exp.string == "true" || exp.string == "false")
+            {
+                emit(OP_CONST);
+                emit(booleanConstIdx(exp.string == "true" ? true : false));
+            }
+            else
+            {
+            }
             break;
         case ExpType::LIST:
         {
@@ -82,6 +92,13 @@ public:
                 {
                     GEN_BINARY_OP(OP_MUL);
                 }
+                else if (compareOps.count(op) != 0)
+                {
+                    gen(exp.list[1]);
+                    gen(exp.list[2]);
+                    emit(OP_COMPARE);
+                    emit(compareOps[op]);
+                }
             }
             break;
         }
@@ -103,12 +120,29 @@ public:
         return co->constants.size() - 1;
     }
 
+    size_t booleanConstIdx(bool value)
+    {
+        ALLOC_CONST(IS_BOOLEAN, AS_BOOLEAN, BOOLEAN, value);
+        return co->constants.size() - 1;
+    }
+
     void emit(uint8_t code)
     {
         co->code.push_back(code);
     }
 
     CodeObject *co;
+
+    static std::map<std::string, uint8_t> compareOps;
+};
+
+std::map<std::string, uint8_t> XPCompiler::compareOps = {
+    {"<", 0},
+    {">", 1},
+    {"==", 2},
+    {">=", 3},
+    {"<=", 4},
+    {"!=", 5},
 };
 
 #endif

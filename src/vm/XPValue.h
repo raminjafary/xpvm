@@ -5,6 +5,7 @@
 enum class XPValueType
 {
     NUMBER,
+    BOOLEAN,
     OBJECT
 };
 
@@ -32,6 +33,7 @@ struct XPValue
     union
     {
         double number;
+        bool boolean;
         Object *object;
     };
 };
@@ -46,6 +48,7 @@ struct CodeObject : public Object
 };
 
 #define NUMBER(value) ((XPValue){XPValueType::NUMBER, .number = value})
+#define BOOLEAN(value) ((XPValue){XPValueType::BOOLEAN, .boolean = value})
 #define ALLOC_STRING(value) \
     ((XPValue){XPValueType::OBJECT, .object = (Object *)new StringObject(value)})
 #define ALLOC_CODE(name) \
@@ -53,6 +56,7 @@ struct CodeObject : public Object
 
 #define AS_NUMBER(xPValue) ((double)(xPValue).number)
 #define AS_OBJECT(xPValue) ((Object *)(xPValue).object)
+#define AS_BOOLEAN(xPValue) ((bool)(xPValue).boolean)
 
 #define AS_STRING(xPValue) ((StringObject *)(xPValue).object)
 #define AS_CODE(xPValue) ((CodeObject *)(xPValue).object)
@@ -60,6 +64,7 @@ struct CodeObject : public Object
 
 #define IS_NUMBER(xpValue) ((xpValue).type == XPValueType::NUMBER)
 #define IS_OBJECT(xpValue) ((xpValue).type == XPValueType::OBJECT)
+#define IS_BOOLEAN(xpValue) ((xpValue).type == XPValueType::BOOLEAN)
 
 #define IS_OBJECT_TYPE(xpValue, objectType) \
     (IS_OBJECT(xpValue) && AS_OBJECT(xpValue)->type == objectType)
@@ -72,6 +77,10 @@ std::string xpValueToTypeString(const XPValue &value)
     if (IS_NUMBER(value))
     {
         return "NUMBER";
+    }
+    else if (IS_BOOLEAN(value))
+    {
+        return "BOOLEAN";
     }
     else if (IS_STRING(value))
     {
@@ -95,6 +104,10 @@ std::string xpValueToConstantString(const XPValue &value)
     if (IS_NUMBER(value))
     {
         ss << value.number;
+    }
+    else if (IS_BOOLEAN(value))
+    {
+        ss << (value.boolean == true ? "true" : "false");
     }
     else if (IS_STRING(value))
     {

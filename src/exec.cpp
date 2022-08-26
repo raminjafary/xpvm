@@ -9,7 +9,10 @@ int main(int argc, char const *argv[])
 
     auto result = vm.exec(R"(
 
-        (+ 1 (+ 5 4))
+        // (+ 1 (+ 5 4))
+        // true
+        // false
+        (< 5 6)
 
     )");
 
