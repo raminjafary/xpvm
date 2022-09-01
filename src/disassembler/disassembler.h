@@ -37,6 +37,7 @@ public:
             << std::uppercase
             << std::hex
             << std::setfill('0')
+            << std::right
             << std::setw(4)
             << offset
             << "    ";
@@ -134,6 +135,7 @@ private:
         std::cout << std::uppercase
                   << std::hex
                   << std::setfill('0')
+                  << std::right
                   << std::setw(4)
                   << (int)address
                   << "  ";

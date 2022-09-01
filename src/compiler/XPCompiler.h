@@ -153,6 +153,33 @@ public:
                     patchJmpAddress(endAddress, endBranchAddress);
                 }
 
+                else if (op == "while")
+                {
+                    auto loopStartAddress = getOffset();
+
+                    gen(exp.list[1]);
+
+                    emit(OP_JMP_IF_FALSE);
+
+                    emit(0);
+                    emit(0);
+
+                    auto loopEndJmpAddress = getOffset() - 2;
+
+                    gen(exp.list[2]);
+                    emit(OP_JMP);
+
+                    emit(0);
+                    emit(0);
+
+                    auto endAddress = getOffset() - 2;
+
+                    patchJmpAddress(endAddress, loopStartAddress);
+
+                    auto loopEndAddress = getOffset() + 1;
+                    patchJmpAddress(loopEndJmpAddress, loopEndAddress);
+                }
+
                 else if (op == "var")
                 {
                     auto varName = exp.list[1].string;
@@ -255,7 +282,7 @@ private:
 
     bool isGlobalScope()
     {
-        return  co->name == "main" && co->scopeLevel == 1;
+        return co->name == "main" && co->scopeLevel == 1;
     }
 
     void enterScope()
