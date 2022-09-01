@@ -41,6 +41,12 @@ struct XPValue
     };
 };
 
+struct LocalVar
+{
+    std::string name;
+    size_t scoleLevel;
+};
+
 struct CodeObject : public Object
 {
     CodeObject(const std::string &name) : Object(ObjectType::CODE), name(name) {}
@@ -48,6 +54,30 @@ struct CodeObject : public Object
     std::string name;
     std::vector<uint8_t> code;
     std::vector<XPValue> constants;
+
+    size_t scopeLevel = 0;
+    std::vector<LocalVar> locals;
+
+    void addLocal(const std::string &name)
+    {
+        locals.push_back({name, scopeLevel});
+    }
+
+    int getlocalIndex(const std::string &name)
+    {
+        if (locals.size() > 0)
+        {
+            for (auto i = (int)locals.size() - 1; i >= 0; i--)
+            {
+                if (locals[i].name == name)
+                {
+                    return i;
+                }
+            }
+        }
+
+        return -1;
+    }
 };
 
 #define NUMBER(value) ((XPValue){XPValueType::NUMBER, .number = value})

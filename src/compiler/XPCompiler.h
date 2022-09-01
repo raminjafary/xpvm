@@ -69,13 +69,26 @@ public:
             }
             else
             {
-                if (!global->exists(exp.string))
-                {
-                    DIE << "[Compiler]: Refrence error: " << exp.string;
-                }
+                auto varName = exp.string;
 
-                emit(OP_GET_GLOBAL);
-                emit(global->getGlobalIndex(exp.string));
+                auto localIndex = co->getlocalIndex(varName);
+
+                if (localIndex != -1)
+                {
+                    emit(OP_GET_LOCAL);
+                    emit(localIndex);
+                }
+                else
+                {
+
+                    if (!global->exists(varName))
+                    {
+                        DIE << "[Compiler]: Refrence error: " << varName;
+                    }
+
+                    emit(OP_GET_GLOBAL);
+                    emit(global->getGlobalIndex(varName));
+                }
             }
             break;
         case ExpType::LIST:
@@ -142,15 +155,23 @@ public:
 
                 else if (op == "var")
                 {
-
                     auto varName = exp.list[1].string;
-
-                    global->define(varName);
 
                     gen(exp.list[2]);
 
-                    emit(OP_SET_GLOBAL);
-                    emit(global->getGlobalIndex(varName));
+                    if (isGlobalScope())
+                    {
+
+                        global->define(varName);
+                        emit(OP_SET_GLOBAL);
+                        emit(global->getGlobalIndex(varName));
+                    }
+                    else
+                    {
+                        co->addLocal(varName);
+                        emit(OP_SET_LOCAL);
+                        emit(co->getlocalIndex(varName));
+                    }
                 }
 
                 else if (op == "set")
@@ -159,14 +180,42 @@ public:
 
                     gen(exp.list[2]);
 
-                    auto globalIndex = global->getGlobalIndex(varName);
+                    auto localIndex = co->getlocalIndex(varName);
 
-                    if (globalIndex == -1)
+                    if (localIndex != -1)
                     {
-                        DIE << " Refrence error: " << varName << " is not defined!";
+                        emit(OP_SET_LOCAL);
+                        emit(localIndex);
                     }
-                    emit(OP_SET_GLOBAL);
-                    emit(globalIndex);
+                    else
+                    {
+                        auto globalIndex = global->getGlobalIndex(varName);
+
+                        if (globalIndex == -1)
+                        {
+                            DIE << "Refrence error: " << varName << " is not defined!";
+                        }
+                        emit(OP_SET_GLOBAL);
+                        emit(globalIndex);
+                    }
+                }
+                else if (op == "begin")
+                {
+                    enterScope();
+                    for (auto i = 1; i < exp.list.size(); i++)
+                    {
+                        bool isLast = i == exp.list.size() - 1;
+
+                        auto isLocalDeclaration = isDeclaration(exp.list[i]) && !isGlobalScope();
+
+                        gen(exp.list[i]);
+
+                        if (!isLast && !isLocalDeclaration)
+                        {
+                            emit(OP_POP);
+                        }
+                    }
+                    exitScope();
                 }
             }
             break;
@@ -187,6 +236,58 @@ private:
     size_t getOffset()
     {
         return co->code.size();
+    }
+
+    bool isDeclaration(const Exp &exp)
+    {
+        return isVarDeclaration(exp);
+    }
+
+    bool isVarDeclaration(const Exp &exp)
+    {
+        return isTaggedList(exp, "var");
+    }
+
+    bool isTaggedList(const Exp &exp, const std::string &tag)
+    {
+        return exp.type == ExpType::LIST && exp.list[0].type == ExpType::SYMBOL && exp.list[0].string == tag;
+    }
+
+    bool isGlobalScope()
+    {
+        return  co->name == "main" && co->scopeLevel == 1;
+    }
+
+    void enterScope()
+    {
+        co->scopeLevel++;
+    }
+
+    void exitScope()
+    {
+        auto varCounts = getVarCountOnScopeExit();
+
+        if (varCounts > 0)
+        {
+            emit(OP_SCOPE_EXIT);
+            emit(varCounts);
+        }
+        co->scopeLevel--;
+    }
+
+    size_t getVarCountOnScopeExit()
+    {
+        auto varCount = 0;
+
+        if (co->locals.size() > 0)
+        {
+            while (co->locals.back().scoleLevel == co->scopeLevel)
+            {
+                co->locals.pop_back();
+                varCount++;
+            }
+        }
+        return varCount;
     }
 
     void writeByteAtOffset(size_t offset, uint8_t value)

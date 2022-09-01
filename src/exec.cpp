@@ -8,17 +8,20 @@ int main(int argc, char const *argv[])
     XPVM vm;
 
     auto result = vm.exec(R"(
-
-        // (+ 1 (+ 5 4))
-        // true
-        // false
-        // (< 5 6)
-        // (if (> 5 10) 1 2)
-        // 10
-        // (+ 5 2)
-        // x
-        // (var z (+ y 10))
+        (var x 5)
         (set x (+ x 10))
+        
+        x
+
+        (begin 
+            (var z 100)
+            (set x 1000)
+            (begin 
+                (var x 200)
+            z)
+        x)
+
+        x
 
     )");
 

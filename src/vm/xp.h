@@ -85,7 +85,7 @@ public:
     {
         if (sp == stack.begin())
         {
-            DIE << "empty stack!";
+            DIE << "pop(): empty stack!";
         }
         --sp;
         return *sp;
@@ -101,16 +101,28 @@ public:
         return *(sp - 1 - offset);
     }
 
+    void popN(size_t count)
+    {
+        if (stack.size() == 0)
+        {
+            DIE << "popN(): empty stack.\n";
+        }
+
+        sp -= count;
+    }
+
     XPValue exec(const std::string &program)
 
     {
-        auto ast = parser->parse(program);
+        auto ast = parser->parse("(begin " + program + ")");
 
         co = compiler->compile(ast);
 
         ip = &co->code[0];
 
         sp = &stack[0];
+
+        bp = sp;
 
         compiler->disassembleByteCode();
 
@@ -208,21 +220,55 @@ public:
                 global->set(globalIndex, value);
                 break;
             }
+            case OP_POP:
+                pop();
+                break;
+            case OP_GET_LOCAL:
+            {
+                auto localIndex = READ_BYTE();
+                if (localIndex < 0 || localIndex >= stack.size())
+                {
+                    DIE << "OP_GET_LOCAL Invalid varibale index: " << (int)localIndex;
+                }
+                push(bp[localIndex]);
+                break;
+            }
+            case OP_SET_LOCAL:
+            {
+                auto localIndex = READ_BYTE();
+                auto value = peek(0);
+                if (localIndex < 0 || localIndex >= stack.size())
+                {
+                    DIE << "OP_SET_LOCAL Invalid varibale index: " << (int)localIndex;
+                }
+                bp[localIndex] = value;
+                break;
+            }
+
+            case OP_SCOPE_EXIT:
+            {
+                auto count = READ_BYTE();
+                *(sp - 1 - count) = peek(0);
+                popN(count);
+                break;
+            }
             default:
                 DIE << "Unknown opcode: " << std::hex << int(opcode);
             }
         }
     }
 
-    void setGlobalVariables()
+    void
+    setGlobalVariables()
     {
         global->addConst("y", 50);
-        global->addConst("x", 10);
     }
 
     uint8_t *ip;
 
     XPValue *sp;
+
+    XPValue *bp;
 
     std::shared_ptr<Global> global;
 
