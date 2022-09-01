@@ -5,6 +5,7 @@
 #include <map>
 #include "../vm/XPValue.h"
 #include "../bytecode/OpCode.h"
+#include "../vm/globalVar.h"
 #include "../disassembler/disassembler.h"
 
 #define ALLOC_CONST(tester, convertor, allocator, value) \
@@ -35,7 +36,8 @@
 class XPCompiler
 {
 public:
-    XPCompiler() : disassembler(std::make_unique<Disassembler>()) {}
+    XPCompiler(std::shared_ptr<Global> global) : global(global),
+                                                 disassembler(std::make_unique<Disassembler>(global)) {}
 
     CodeObject *compile(const Exp &exp)
     {
@@ -67,6 +69,13 @@ public:
             }
             else
             {
+                if (!global->exists(exp.string))
+                {
+                    DIE << "[Compiler]: Refrence error: " << exp.string;
+                }
+
+                emit(OP_GET_GLOBAL);
+                emit(global->getGlobalIndex(exp.string));
             }
             break;
         case ExpType::LIST:
@@ -130,6 +139,35 @@ public:
                     auto endBranchAddress = getOffset();
                     patchJmpAddress(endAddress, endBranchAddress);
                 }
+
+                else if (op == "var")
+                {
+
+                    auto varName = exp.list[1].string;
+
+                    global->define(varName);
+
+                    gen(exp.list[2]);
+
+                    emit(OP_SET_GLOBAL);
+                    emit(global->getGlobalIndex(varName));
+                }
+
+                else if (op == "set")
+                {
+                    auto varName = exp.list[1].string;
+
+                    gen(exp.list[2]);
+
+                    auto globalIndex = global->getGlobalIndex(varName);
+
+                    if (globalIndex == -1)
+                    {
+                        DIE << " Refrence error: " << varName << " is not defined!";
+                    }
+                    emit(OP_SET_GLOBAL);
+                    emit(globalIndex);
+                }
             }
             break;
         }
@@ -186,6 +224,8 @@ private:
     }
 
     CodeObject *co;
+
+    std::shared_ptr<Global> global;
 
     static std::map<std::string, uint8_t> compareOps;
 };

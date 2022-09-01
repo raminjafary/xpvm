@@ -5,11 +5,14 @@
 #include <array>
 #include <iomanip>
 #include "../vm/XPValue.h"
+#include "../vm/globalVar.h"
 #include "../bytecode/OpCode.h"
 
 class Disassembler
 {
 public:
+    Disassembler(std::shared_ptr<Global> global) : global(global) {}
+
     void disassemble(CodeObject *co)
     {
         std::cout
@@ -55,6 +58,9 @@ public:
             return disassembleJmp(co, opcode, offset);
         case OP_CONST:
             return disassembleConst(co, opcode, offset);
+        case OP_GET_GLOBAL:
+        case OP_SET_GLOBAL:
+            return disassembleGlobal(co, opcode, offset);
         default:
             DIE << "disassembleInstruction: no assembly for " << opcodeToString(opcode);
         }
@@ -123,6 +129,21 @@ private:
         return offset + 3;
     }
 
+    size_t disassembleGlobal(CodeObject *co, uint8_t opcode, size_t offset)
+    {
+        dumpBytes(co, offset, 2);
+        printOpCode(opcode);
+
+        auto globalIndex = co->code[offset + 1];
+
+        std::cout << (int)globalIndex
+                  << " ("
+                  << global->get(globalIndex).name
+                  << ")";
+
+        return offset + 2;
+    }
+
     uint16_t readWordAtOffset(CodeObject *co, size_t offset)
     {
         return ((uint16_t)(co->code[offset] << 8) | co->code[offset + 1]);
@@ -165,6 +186,8 @@ private:
 
         std::cout.flags(f);
     }
+
+    std::shared_ptr<Global> global;
 
     static std::array<std::string, 6> inverseCompareOp;
 };

@@ -13,9 +13,12 @@ int main(int argc, char const *argv[])
         // true
         // false
         // (< 5 6)
-        (if (> 5 10) 1 2)
+        // (if (> 5 10) 1 2)
         // 10
         // (+ 5 2)
+        // x
+        // (var z (+ y 10))
+        (set x (+ x 10))
 
     )");
 

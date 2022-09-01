@@ -11,6 +11,7 @@
 #include "../parser/XPParser.h"
 #include "../compiler/XPCompiler.h"
 #include "XPValue.h"
+#include "globalVar.h"
 
 using syntax::XPParser;
 
@@ -63,8 +64,12 @@ using syntax::XPParser;
 class XPVM
 {
 public:
-    XPVM() : parser(std::make_unique<XPParser>()),
-             compiler(std::make_unique<XPCompiler>()) {}
+    XPVM() : global(std::make_shared<Global>()),
+             parser(std::make_unique<XPParser>()),
+             compiler(std::make_unique<XPCompiler>(global))
+    {
+        setGlobalVariables();
+    }
 
     void push(const XPValue &value)
     {
@@ -84,6 +89,16 @@ public:
         }
         --sp;
         return *sp;
+    }
+
+    XPValue peek(size_t offset = 0)
+    {
+        if (stack.size() == 0)
+        {
+            DIE << "peek(): empty stack.\n";
+        }
+
+        return *(sp - 1 - offset);
     }
 
     XPValue exec(const std::string &program)
@@ -180,17 +195,39 @@ public:
             case OP_JMP:
                 ip = TO_ADDRESS(READ_SHORT());
                 break;
+            case OP_GET_GLOBAL:
+            {
+                auto globalIndex = READ_BYTE();
+                push(global->get(globalIndex).value);
+                break;
+            }
+            case OP_SET_GLOBAL:
+            {
+                auto globalIndex = READ_BYTE();
+                auto value = peek(0);
+                global->set(globalIndex, value);
+                break;
+            }
             default:
                 DIE << "Unknown opcode: " << std::hex << int(opcode);
             }
         }
     }
 
+    void setGlobalVariables()
+    {
+        global->addConst("y", 50);
+        global->addConst("x", 10);
+    }
+
     uint8_t *ip;
 
     XPValue *sp;
 
+    std::shared_ptr<Global> global;
+
     std::unique_ptr<XPParser> parser;
+
     std::unique_ptr<XPCompiler> compiler;
 
     std::array<XPValue, STACK_LIMIT> stack;
