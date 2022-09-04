@@ -27,6 +27,8 @@
 
 #define OP_SCOPE_EXIT 0x14
 
+#define OP_CALL 0x15
+
 #define OP_STR(opcode) \
     case OP_##opcode:  \
         return #opcode
@@ -49,6 +51,7 @@ std::string opcodeToString(uint8_t opcode)
         OP_STR(GET_LOCAL);
         OP_STR(SET_LOCAL);
         OP_STR(SCOPE_EXIT);
+        OP_STR(CALL);
     default:
         DIE << "opcodeToString: unknown opcode" << std::hex << (int)opcode;
     }

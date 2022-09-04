@@ -54,6 +54,7 @@ public:
         case OP_POP:
             return disassembleSimple(co, opcode, offset);
         case OP_SCOPE_EXIT:
+        case OP_CALL:
             return disassembleWord(co, opcode, offset);
         case OP_COMPARE:
             return disassembleCompareOp(co, opcode, offset);

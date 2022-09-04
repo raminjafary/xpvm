@@ -15,7 +15,8 @@ enum class XPValueType
 enum class ObjectType
 {
     STRING,
-    CODE
+    CODE,
+    NATIVE
 };
 
 struct Object
@@ -28,6 +29,21 @@ struct StringObject : public Object
 {
     StringObject(const std::string &str) : Object(ObjectType::STRING), string(str) {}
     std::string string;
+};
+
+using NativeFunction = std::function<void()>;
+
+struct NativeObject : public Object
+{
+    NativeObject(NativeFunction function, const std::string &name, size_t arity)
+        : Object(ObjectType::NATIVE),
+          function(function),
+          name(name),
+          arity(arity) {}
+
+    NativeFunction function;
+    std::string name;
+    size_t arity;
 };
 
 struct XPValue
@@ -86,10 +102,13 @@ struct CodeObject : public Object
     ((XPValue){XPValueType::OBJECT, .object = (Object *)new StringObject(value)})
 #define ALLOC_CODE(name) \
     ((XPValue){XPValueType::OBJECT, .object = (Object *)new CodeObject(name)})
+#define ALLOC_NATIVE(fn, name, arity) \
+    ((XPValue){XPValueType::OBJECT, .object = (Object *)new NativeObject(fn, name, arity)})
 
 #define AS_NUMBER(xPValue) ((double)(xPValue).number)
 #define AS_OBJECT(xPValue) ((Object *)(xPValue).object)
 #define AS_BOOLEAN(xPValue) ((bool)(xPValue).boolean)
+#define AS_NATIVE(xPValue) ((NativeObject *)(xPValue).object)
 
 #define AS_STRING(xPValue) ((StringObject *)(xPValue).object)
 #define AS_CODE(xPValue) ((CodeObject *)(xPValue).object)
@@ -104,6 +123,7 @@ struct CodeObject : public Object
 
 #define IS_STRING(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::STRING)
 #define IS_CODE(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::CODE)
+#define IS_NATIVE(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::NATIVE)
 
 std::string xpValueToTypeString(const XPValue &value)
 {
@@ -122,6 +142,10 @@ std::string xpValueToTypeString(const XPValue &value)
     else if (IS_CODE(value))
     {
         return "CODE";
+    }
+    else if (IS_NATIVE(value))
+    {
+        return "NATIVE";
     }
     else
     {
@@ -150,6 +174,11 @@ std::string xpValueToConstantString(const XPValue &value)
     {
         auto code = AS_CODE(value);
         ss << "code " << code << ": " << code->name;
+    }
+    else if (IS_NATIVE(value))
+    {
+        auto fn = AS_NATIVE(value);
+        ss << fn->name << "/" << fn->arity;
     }
     else
     {
