@@ -4,6 +4,7 @@
 #include <iostream>
 #include <array>
 #include <string>
+#include <stack>
 #include <vector>
 
 #include "../Logger.h"
@@ -19,11 +20,11 @@ using syntax::XPParser;
 
 #define STACK_LIMIT 512
 
-#define GET_CONST() co->constants[READ_BYTE()]
+#define GET_CONST() fn->co->constants[READ_BYTE()]
 
 #define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
 
-#define TO_ADDRESS(index) (&co->code[index])
+#define TO_ADDRESS(index) (&fn->co->code[index])
 
 #define BINARY_OP(op)                \
     do                               \
@@ -60,6 +61,16 @@ using syntax::XPParser;
         }                            \
         push(BOOLEAN(res));          \
     } while (false)
+
+struct Frame
+{
+
+    uint8_t *ra;
+
+    XPValue *bp;
+
+    FunctionObject *fn;
+};
 
 class XPVM
 {
@@ -116,9 +127,11 @@ public:
     {
         auto ast = parser->parse("(begin " + program + ")");
 
-        co = compiler->compile(ast);
+        compiler->compile(ast);
 
-        ip = &co->code[0];
+        fn = compiler->getMainFunction();
+
+        ip = &fn->co->code[0];
 
         sp = &stack[0];
 
@@ -267,7 +280,32 @@ public:
                     push(result);
                     break;
                 }
+
+                auto callee = AS_FUNCTION(fnValue);
+
+                callStack.push(Frame{ip, bp, fn});
+
+                fn = callee;
+
+                bp = sp - argsCount - 1;
+
+                ip = &callee->co->code[0];
+
+                break;
             }
+
+            case OP_RETURN:
+            {
+                auto callerFrame = callStack.top();
+
+                ip = callerFrame.ra;
+                bp = callerFrame.bp;
+                fn = callerFrame.fn;
+
+                callStack.pop();
+                break;
+            }
+
             default:
                 DIE << "Unknown opcode: " << std::hex << int(opcode);
             }
@@ -320,7 +358,9 @@ public:
 
     std::array<XPValue, STACK_LIMIT> stack;
 
-    CodeObject *co;
+    std::stack<Frame> callStack;
+
+    FunctionObject *fn;
 };
 
 #endif

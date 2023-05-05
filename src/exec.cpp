@@ -8,7 +8,9 @@ int main(int argc, char const *argv[])
     XPVM vm;
 
     auto result = vm.exec(R"(
-        (def add (x) (+ x x))
+        (def squaree (x) (* x x))
+
+       (squaree 2)
 
         (def sum (a b) 
             (begin 
@@ -18,15 +20,15 @@ int main(int argc, char const *argv[])
         )
 
 
-        // (sum 2)
+        (sum 2 4)
 
-        // (def factorial (x) 
-        //     (if (== x 1)
-        //         1
-        //         (*x (factorial (-x 1)))
-        //     )   
-        // )
-        // (factorial 5)
+        (def factorial (x) 
+            (if (== x 1)
+                1
+                (* x (factorial (- x 1)))
+            )   
+        )
+        (factorial 5)
     )");
 
     // vm.dumpStack();

@@ -39,13 +39,13 @@ public:
     XPCompiler(std::shared_ptr<Global> global) : global(global),
                                                  disassembler(std::make_unique<Disassembler>(global)) {}
 
-    CodeObject *compile(const Exp &exp)
+    void compile(const Exp &exp)
     {
         co = AS_CODE(createCodeObjectValue("main"));
+        main = AS_FUNCTION(ALLOC_FUNCTION(co));
 
         gen(exp);
         emit(OP_HALT);
-        return co;
     }
 
     void gen(const Exp &exp)
@@ -321,6 +321,11 @@ public:
         }
     }
 
+    FunctionObject *getMainFunction()
+    {
+        return main;
+    }
+
     XPValue createCodeObjectValue(const std::string &name, size_t arity = 0)
     {
         auto coValue = ALLOC_CODE(name, arity);
@@ -447,6 +452,8 @@ private:
     }
 
     CodeObject *co;
+
+    FunctionObject *main;
 
     std::vector<CodeObject *> codeObjects_;
 
