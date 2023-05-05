@@ -29,6 +29,12 @@ int main(int argc, char const *argv[])
             )   
         )
         (factorial 5)
+
+        (lambda (x) (* x x))
+        (var sqaure (lambda (x) (* x x)))
+
+        ((lambda (x) (* x x)) 2)
+
     )");
 
     // vm.dumpStack();

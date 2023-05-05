@@ -33,6 +33,18 @@
         emit(op);         \
     } while (false)
 
+#define FUNCTION_CALL(exp)                         \
+    do                                             \
+    {                                              \
+        gen(exp.list[0]);                          \
+        for (auto i = 1; i < exp.list.size(); i++) \
+        {                                          \
+            gen(exp.list[i]);                      \
+        }                                          \
+        emit(OP_CALL);                             \
+        emit(exp.list.size() - 1);                 \
+    } while (false)
+
 class XPCompiler
 {
 public:
@@ -184,7 +196,18 @@ public:
                 {
                     auto varName = exp.list[1].string;
 
-                    gen(exp.list[2]);
+                    if (isLambda(exp.list[2]))
+                    {
+                        compileFunction(
+                            exp.list[2],
+                            varName,
+                            exp.list[2].list[1],
+                            exp.list[2].list[2]);
+                    }
+                    else
+                    {
+                        gen(exp.list[2]);
+                    }
 
                     if (isGlobalScope())
                     {
@@ -247,42 +270,12 @@ public:
                 else if (op == "def")
                 {
                     auto fnName = exp.list[1].string;
-                    auto params = exp.list[2].list;
-                    auto arity = params.size();
-                    auto body = exp.list[3];
 
-                    auto prevCo = co;
-
-                    auto coValue = createCodeObjectValue(fnName, arity);
-                    co = AS_CODE(coValue);
-
-                    prevCo->addConstant(coValue);
-                    co->addLocal(fnName);
-
-                    for (auto i = 0; i < arity; i++)
-                    {
-                        auto argName = params[i].string;
-                        co->addLocal(argName);
-                    }
-
-                    gen(body);
-
-                    if (!isBlock(body))
-                    {
-                        emit(OP_SCOPE_EXIT);
-                        emit(arity + 1);
-                    }
-
-                    emit(OP_RETURN);
-
-                    auto fn = ALLOC_FUNCTION(co);
-
-                    co = prevCo;
-
-                    co->addConstant(fn);
-
-                    emit(OP_CONST);
-                    emit(co->constants.size() - 1);
+                    compileFunction(
+                        exp,
+                        fnName,
+                        exp.list[2],
+                        exp.list[3]);
 
                     if (isGlobalScope())
                     {
@@ -300,18 +293,22 @@ public:
 
                     break;
                 }
+                else if (op == "lambda")
+                {
+                    compileFunction(
+                        exp,
+                        "lambda",
+                        exp.list[1],
+                        exp.list[2]);
+                }
                 else
                 {
-                    gen(exp.list[0]);
-
-                    for (auto i = 1; i < exp.list.size(); i++)
-                    {
-                        gen(exp.list[i]);
-                    }
-
-                    emit(OP_CALL);
-                    emit(exp.list.size() - 1);
+                    FUNCTION_CALL(exp);
                 }
+            }
+            else
+            {
+                FUNCTION_CALL(exp);
             }
             break;
         }
@@ -319,6 +316,46 @@ public:
         default:
             break;
         }
+    }
+
+    void compileFunction(const Exp &exp, const std::string &fnName,
+                         const Exp &params, const Exp &body)
+    {
+
+        auto arity = params.list.size();
+
+        auto prevCo = co;
+
+        auto coValue = createCodeObjectValue(fnName, arity);
+        co = AS_CODE(coValue);
+
+        prevCo->addConstant(coValue);
+        co->addLocal(fnName);
+
+        for (auto i = 0; i < arity; i++)
+        {
+            auto argName = params.list[i].string;
+            co->addLocal(argName);
+        }
+
+        gen(body);
+
+        if (!isBlock(body))
+        {
+            emit(OP_SCOPE_EXIT);
+            emit(arity + 1);
+        }
+
+        emit(OP_RETURN);
+
+        auto fn = ALLOC_FUNCTION(co);
+
+        co = prevCo;
+
+        co->addConstant(fn);
+
+        emit(OP_CONST);
+        emit(co->constants.size() - 1);
     }
 
     FunctionObject *getMainFunction()
@@ -367,6 +404,11 @@ private:
     bool isBlock(const Exp &exp)
     {
         return isTaggedList(exp, "begin");
+    }
+
+    bool isLambda(const Exp &exp)
+    {
+        return isTaggedList(exp, "lambda");
     }
 
     bool isGlobalScope()
