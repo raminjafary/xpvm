@@ -16,7 +16,8 @@ enum class ObjectType
 {
     STRING,
     CODE,
-    NATIVE
+    NATIVE,
+    FUNCTION
 };
 
 struct Object
@@ -65,9 +66,12 @@ struct LocalVar
 
 struct CodeObject : public Object
 {
-    CodeObject(const std::string &name) : Object(ObjectType::CODE), name(name) {}
+    CodeObject(const std::string &name, size_t arity) : Object(ObjectType::CODE),
+                                                        name(name),
+                                                        arity(arity) {}
 
     std::string name;
+    size_t arity;
     std::vector<uint8_t> code;
     std::vector<XPValue> constants;
 
@@ -77,6 +81,11 @@ struct CodeObject : public Object
     void addLocal(const std::string &name)
     {
         locals.push_back({name, scopeLevel});
+    }
+
+    void addConstant(const XPValue &value)
+    {
+        constants.push_back(value);
     }
 
     int getlocalIndex(const std::string &name)
@@ -96,19 +105,29 @@ struct CodeObject : public Object
     }
 };
 
+struct FunctionObject : public Object
+{
+    FunctionObject(CodeObject *co) : Object(ObjectType::FUNCTION), co(co) {}
+    CodeObject *co;
+};
+
 #define NUMBER(value) ((XPValue){XPValueType::NUMBER, .number = value})
 #define BOOLEAN(value) ((XPValue){XPValueType::BOOLEAN, .boolean = value})
 #define ALLOC_STRING(value) \
     ((XPValue){XPValueType::OBJECT, .object = (Object *)new StringObject(value)})
-#define ALLOC_CODE(name) \
-    ((XPValue){XPValueType::OBJECT, .object = (Object *)new CodeObject(name)})
+#define ALLOC_CODE(name, arity) \
+    ((XPValue){XPValueType::OBJECT, .object = (Object *)new CodeObject(name, arity)})
 #define ALLOC_NATIVE(fn, name, arity) \
     ((XPValue){XPValueType::OBJECT, .object = (Object *)new NativeObject(fn, name, arity)})
+
+#define ALLOC_FUNCTION(co) \
+    ((XPValue){XPValueType::OBJECT, .object = (Object *)new FunctionObject(co)})
 
 #define AS_NUMBER(xPValue) ((double)(xPValue).number)
 #define AS_OBJECT(xPValue) ((Object *)(xPValue).object)
 #define AS_BOOLEAN(xPValue) ((bool)(xPValue).boolean)
 #define AS_NATIVE(xPValue) ((NativeObject *)(xPValue).object)
+#define AS_FUNCTION(xPValue) ((FunctionObject *)(xPValue).object)
 
 #define AS_STRING(xPValue) ((StringObject *)(xPValue).object)
 #define AS_CODE(xPValue) ((CodeObject *)(xPValue).object)
@@ -124,6 +143,7 @@ struct CodeObject : public Object
 #define IS_STRING(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::STRING)
 #define IS_CODE(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::CODE)
 #define IS_NATIVE(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::NATIVE)
+#define IS_FUNCTION(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::FUNCTION)
 
 std::string xpValueToTypeString(const XPValue &value)
 {
@@ -146,6 +166,10 @@ std::string xpValueToTypeString(const XPValue &value)
     else if (IS_NATIVE(value))
     {
         return "NATIVE";
+    }
+    else if (IS_FUNCTION(value))
+    {
+        return "FUNCTION";
     }
     else
     {
@@ -173,7 +197,12 @@ std::string xpValueToConstantString(const XPValue &value)
     else if (IS_CODE(value))
     {
         auto code = AS_CODE(value);
-        ss << "code " << code << ": " << code->name;
+        ss << "code " << code << ": " << code->name << "/" << code->arity;
+    }
+    else if (IS_FUNCTION(value))
+    {
+        auto fn = AS_FUNCTION(value);
+        ss << fn->co->name << "/" << fn->co->arity;
     }
     else if (IS_NATIVE(value))
     {

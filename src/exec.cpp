@@ -8,9 +8,25 @@ int main(int argc, char const *argv[])
     XPVM vm;
 
     auto result = vm.exec(R"(
-        (var x 2)
-        (square x)
+        (def add (x) (+ x x))
 
+        (def sum (a b) 
+            (begin 
+                (var x 10)
+                (+ x (+ a b))
+            )
+        )
+
+
+        // (sum 2)
+
+        // (def factorial (x) 
+        //     (if (== x 1)
+        //         1
+        //         (*x (factorial (-x 1)))
+        //     )   
+        // )
+        // (factorial 5)
     )");
 
     // vm.dumpStack();
