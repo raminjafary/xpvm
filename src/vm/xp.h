@@ -20,7 +20,7 @@ using syntax::XPParser;
 
 #define STACK_LIMIT 512
 
-#define GET_CONST() fn->co->constants[READ_BYTE()]
+#define GET_CONST() (fn->co->constants[READ_BYTE()])
 
 #define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
 
@@ -155,8 +155,6 @@ public:
                 return pop();
 
             case OP_CONST:
-                // auto constIndex = READ_BYTE();
-                // auto constant = constants[constIndex];
                 push(GET_CONST());
                 break;
 
@@ -230,7 +228,8 @@ public:
             case OP_SET_GLOBAL:
             {
                 auto globalIndex = READ_BYTE();
-                auto value = peek(0);
+                // auto value = peek(0);
+                auto value = pop();
                 global->set(globalIndex, value);
                 break;
             }
@@ -278,7 +277,6 @@ public:
 
                     popN(argsCount + 1);
                     push(result);
-                    break;
                 }
 
                 auto callee = AS_FUNCTION(fnValue);

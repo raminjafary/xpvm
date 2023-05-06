@@ -219,8 +219,8 @@ public:
                     else
                     {
                         co->addLocal(varName);
-                        emit(OP_SET_LOCAL);
-                        emit(co->getlocalIndex(varName));
+                        // emit(OP_SET_LOCAL);
+                        // emit(co->getlocalIndex(varName));
                     }
                 }
 
@@ -256,11 +256,13 @@ public:
                     {
                         bool isLast = i == exp.list.size() - 1;
 
-                        auto isLocalDeclaration = isDeclaration(exp.list[i]) && !isGlobalScope();
+                        // auto isLocalDeclaration = isDeclaration(exp.list[i]) && !isGlobalScope();
+
+                        auto isDecl = isDeclaration(exp.list[i]);
 
                         gen(exp.list[i]);
 
-                        if (!isLast && !isLocalDeclaration)
+                        if (!isLast && !isDecl)
                         {
                             emit(OP_POP);
                         }
@@ -287,11 +289,9 @@ public:
                     else
                     {
                         co->addLocal(fnName);
-                        emit(OP_SET_LOCAL);
-                        emit(co->getlocalIndex(fnName));
+                        // emit(OP_SET_LOCAL);
+                        // emit(co->getlocalIndex(fnName));
                     }
-
-                    break;
                 }
                 else if (op == "lambda")
                 {
