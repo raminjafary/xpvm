@@ -119,6 +119,8 @@ public:
                     {
                         newScope->addLocal(exp.list[2].list[i].string);
                     }
+
+                    analyze(exp.list[3], newScope);
                 }
                 else if (op == "lambda")
                 {
@@ -126,18 +128,18 @@ public:
 
                     scopeInfo_[&exp] = newScope;
 
-                    auto arity = exp.list[2].list.size();
+                    auto arity = exp.list[1].list.size();
 
                     for (auto i = 0; i < arity; i++)
                     {
-                        newScope->addLocal(exp.list[2].list[i].string);
+                        newScope->addLocal(exp.list[1].list[i].string);
                     }
 
                     analyze(exp.list[2], newScope);
                 }
                 else
                 {
-                    for (auto i = 0; i < exp.list.size(); i++)
+                    for (auto i = 1; i < exp.list.size(); i++)
                     {
                         analyze(exp.list[i], scope);
                     }
@@ -176,12 +178,16 @@ public:
             {
                 auto varName = exp.string;
 
-                auto localIndex = co->getlocalIndex(varName);
+                auto opCodeGetter = scopeStack_.top()->getNameGetter(varName);
+                emit(opCodeGetter);
 
-                if (localIndex != -1)
+                if (opCodeGetter == OP_GET_LOCAL)
                 {
-                    emit(OP_GET_LOCAL);
-                    emit(localIndex);
+                    emit(co->getlocalIndex(varName));
+                }
+                else if (opCodeGetter == OP_GET_CELL)
+                {
+                    emit(co->getCellIndex(varName));
                 }
                 else
                 {
@@ -191,7 +197,6 @@ public:
                         DIE << "[Compiler]: Refrence error: " << varName;
                     }
 
-                    emit(OP_GET_GLOBAL);
                     emit(global->getGlobalIndex(varName));
                 }
             }
@@ -289,6 +294,8 @@ public:
                 {
                     auto varName = exp.list[1].string;
 
+                    auto opCodeSetter = scopeStack_.top()->getNameSetter(varName);
+
                     if (isLambda(exp.list[2]))
                     {
                         compileFunction(
@@ -302,12 +309,19 @@ public:
                         gen(exp.list[2]);
                     }
 
-                    if (isGlobalScope())
+                    if (opCodeSetter == OP_SET_GLOBAL)
                     {
 
                         global->define(varName);
                         emit(OP_SET_GLOBAL);
                         emit(global->getGlobalIndex(varName));
+                    }
+                    else if (opCodeSetter == OP_SET_CELL)
+                    {
+                        co->cellNames.push_back(varName);
+                        emit(OP_SET_CELL);
+                        emit(co->cellNames.size() - 1);
+                        emit(OP_POP);
                     }
                     else
                     {
@@ -321,14 +335,19 @@ public:
                 {
                     auto varName = exp.list[1].string;
 
+                    auto opCodeSetter = scopeStack_.top()->getNameSetter(varName);
+
                     gen(exp.list[2]);
 
-                    auto localIndex = co->getlocalIndex(varName);
-
-                    if (localIndex != -1)
+                    if (opCodeSetter == OP_SET_LOCAL)
                     {
                         emit(OP_SET_LOCAL);
-                        emit(localIndex);
+                        emit(co->getlocalIndex(varName));
+                    }
+                    else if (opCodeSetter == OP_SET_CELL)
+                    {
+                        emit(OP_SET_CELL);
+                        emit(co->getCellIndex(varName));
                     }
                     else
                     {
@@ -344,7 +363,10 @@ public:
                 }
                 else if (op == "begin")
                 {
-                    enterScope();
+                    scopeStack_.push(scopeInfo_.at(&exp));
+
+                    blockEnter();
+
                     for (auto i = 1; i < exp.list.size(); i++)
                     {
                         bool isLast = i == exp.list.size() - 1;
@@ -360,7 +382,9 @@ public:
                             emit(OP_POP);
                         }
                     }
-                    exitScope();
+
+                    blockExit();
+                    scopeStack_.pop();
                 }
                 else if (op == "def")
                 {
@@ -414,6 +438,8 @@ public:
     void compileFunction(const Exp &exp, const std::string &fnName,
                          const Exp &params, const Exp &body)
     {
+        auto scopeInfo = scopeInfo_.at(&exp);
+        scopeStack_.push(scopeInfo);
 
         auto arity = params.list.size();
 
@@ -422,6 +448,14 @@ public:
         auto coValue = createCodeObjectValue(fnName, arity);
         co = AS_CODE(coValue);
 
+        co->freeCount = scopeInfo->free.size();
+
+        co->cellNames.reserve(scopeInfo->free.size() + scopeInfo->cells.size());
+
+        co->cellNames.insert(co->cellNames.end(), scopeInfo->free.begin(), scopeInfo->free.end());
+
+        co->cellNames.insert(co->cellNames.end(), scopeInfo->cells.begin(), scopeInfo->cells.end());
+
         prevCo->addConstant(coValue);
         co->addLocal(fnName);
 
@@ -429,6 +463,13 @@ public:
         {
             auto argName = params.list[i].string;
             co->addLocal(argName);
+
+            auto cellIndex = co->getCellIndex(argName);
+            if (cellIndex != -1)
+            {
+                emit(OP_SET_CELL);
+                emit(cellIndex);
+            }
         }
 
         gen(body);
@@ -449,6 +490,7 @@ public:
 
         emit(OP_CONST);
         emit(co->constants.size() - 1);
+        scopeStack_.pop();
     }
 
     FunctionObject *getMainFunction()
@@ -514,12 +556,12 @@ private:
         return co->name != "main" && co->scopeLevel == 1;
     }
 
-    void enterScope()
+    void blockEnter()
     {
         co->scopeLevel++;
     }
 
-    void exitScope()
+    void blockExit()
     {
         auto varCounts = getVarCountOnScopeExit();
 
@@ -587,6 +629,8 @@ private:
     }
 
     std::map<const Exp *, std::shared_ptr<Scope>> scopeInfo_;
+
+    std::stack<std::shared_ptr<Scope>> scopeStack_;
 
     CodeObject *co;
 

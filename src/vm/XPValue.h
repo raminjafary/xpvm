@@ -76,6 +76,11 @@ struct CodeObject : public Object
     std::vector<XPValue> constants;
 
     size_t scopeLevel = 0;
+
+    std::vector<std::string> cellNames;
+
+    size_t freeCount = 0;
+
     std::vector<LocalVar> locals;
 
     void addLocal(const std::string &name)
@@ -95,6 +100,22 @@ struct CodeObject : public Object
             for (auto i = (int)locals.size() - 1; i >= 0; i--)
             {
                 if (locals[i].name == name)
+                {
+                    return i;
+                }
+            }
+        }
+
+        return -1;
+    }
+
+       int getCellIndex(const std::string &name)
+    {
+        if (locals.size() > 0)
+        {
+            for (auto i = (int)cellNames.size() - 1; i >= 0; i--)
+            {
+                if (cellNames[i] == name)
                 {
                     return i;
                 }

@@ -139,7 +139,8 @@ public:
 
         compiler->disassembleByteCode();
 
-        return eval();
+            return NUMBER(1);
+        // return eval();
     }
 
     XPValue eval()

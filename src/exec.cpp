@@ -9,44 +9,23 @@ int main(int argc, char const *argv[])
 
     auto result = vm.exec(R"(
 
-    //    (squaree 2)
+        (var x 10)
 
-    //     (def sum (a b) 
-    //         (begin 
-    //             (var x 10)
-    //             (+ x (+ a b))
-    //         )
-    //     )
+        (def foo () x)
 
-
-    //     (sum 2 4)
-
-    //     (def factorial (x) 
-    //         (if (== x 1)
-    //             1
-    //             (* x (factorial (- x 1)))
-    //         )   
-    //     )
-    //     (factorial 5)
-
-    //     (lambda (x) (* x x))
-    //     (var sqaure (lambda (x) (* x x)))
-
-    //     ((lambda (x) (* x x)) 2)
-
-    (def sum (x) (* x x))
-
-    // (var x 1)
-    // (var z 2)
-    // (var y (+ x 1))
-
-    // (begin
-    //     (var a 10)
-    //     (var b 20)
-    //     (set a 100)
-    //     (+ a b)
-    // )
-
+        (begin 
+            (var y 100)
+            (var q 300)
+            q
+            (+ y x)
+            (begin
+                (var z 200)
+                z
+                (def bar () (+ y z))
+                (bar)
+            )
+        )
+    
     )");
 
     // vm.dumpStack();
