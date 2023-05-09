@@ -139,8 +139,7 @@ public:
 
         compiler->disassembleByteCode();
 
-            return NUMBER(1);
-        // return eval();
+        return eval();
     }
 
     XPValue eval()
@@ -259,6 +258,51 @@ public:
                 break;
             }
 
+            case OP_GET_CELL:
+            {
+                auto cellIndex = READ_BYTE();
+                push(fn->cells[cellIndex]->value);
+                break;
+            }
+
+            case OP_SET_CELL:
+            {
+                auto cellIndex = READ_BYTE();
+                auto value = peek(0);
+                if (fn->cells.size() <= cellIndex)
+                {
+                    fn->cells.push_back(AS_CELL(ALLOC_CELL(value)));
+                }
+                else
+                {
+                    fn->cells[cellIndex]->value = value;
+                }
+                break;
+            }
+
+            case OP_LOAD_CELL:
+            {
+                auto cellIndex = READ_BYTE();
+                push(CELL(fn->cells[cellIndex]));
+                break;
+            }
+
+            case OP_MAKE_FUNCTION:
+            {
+                auto co = AS_CODE(pop());
+                auto cellsCount = READ_BYTE();
+
+                auto fnValue = ALLOC_FUNCTION(co);
+                auto fn = AS_FUNCTION(fnValue);
+
+                for (auto i = 0; i < cellsCount; i++)
+                {
+                    fn->cells.push_back(AS_CELL(pop()));
+                }
+
+                break;
+            }
+
             case OP_SCOPE_EXIT:
             {
                 auto count = READ_BYTE();
@@ -285,6 +329,8 @@ public:
                 callStack.push(Frame{ip, bp, fn});
 
                 fn = callee;
+
+                fn->cells.resize(fn->co->freeCount);
 
                 bp = sp - argsCount - 1;
 

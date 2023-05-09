@@ -482,14 +482,35 @@ public:
 
         emit(OP_RETURN);
 
-        auto fn = ALLOC_FUNCTION(co);
+        if (scopeInfo->free.size() == 0)
+        {
 
-        co = prevCo;
+            auto fn = ALLOC_FUNCTION(co);
 
-        co->addConstant(fn);
+            co = prevCo;
 
-        emit(OP_CONST);
-        emit(co->constants.size() - 1);
+            co->addConstant(fn);
+
+            emit(OP_CONST);
+            emit(co->constants.size() - 1);
+        }
+        else
+        {
+            co = prevCo;
+
+            for (const auto &freeVar : scopeInfo->free)
+            {
+                emit(OP_LOAD_CELL);
+                emit(prevCo->getCellIndex(freeVar));
+            }
+
+            emit(OP_CONST);
+            emit(co->constants.size() - 1);
+            emit(OP_MAKE_FUNCTION);
+
+            emit(scopeInfo->free.size());
+        }
+
         scopeStack_.pop();
     }
 

@@ -78,6 +78,11 @@ struct Scope
             initAllocType = allocInfo[name];
         }
 
+        if (initAllocType == AllocType::CELL)
+        {
+            return;
+        }
+
         auto [ownerScope, allocType] = resolve(name, initAllocType);
 
         allocInfo[name] = allocType;

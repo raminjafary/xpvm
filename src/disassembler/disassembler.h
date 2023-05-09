@@ -72,7 +72,10 @@ public:
             return disassembleLocal(co, opcode, offset);
         case OP_GET_CELL:
         case OP_SET_CELL:
+        case OP_LOAD_CELL:
             return disassembleCell(co, opcode, offset);
+        case OP_MAKE_FUNCTION:
+            return disassembleMakeFunction(co, opcode, offset);
         default:
             DIE << "disassembleInstruction: no assembly for " << opcodeToString(opcode);
         }
@@ -193,6 +196,10 @@ private:
                   << ")";
 
         return offset + 2;
+    }
+
+    size_t disassembleMakeFunction(CodeObject *co, uint8_t opcode, size_t offset) {
+        return disassembleWord(co, opcode, offset);
     }
 
     uint16_t readWordAtOffset(CodeObject *co, size_t offset)

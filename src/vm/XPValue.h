@@ -17,7 +17,8 @@ enum class ObjectType
     STRING,
     CODE,
     NATIVE,
-    FUNCTION
+    FUNCTION,
+    CELL
 };
 
 struct Object
@@ -109,7 +110,7 @@ struct CodeObject : public Object
         return -1;
     }
 
-       int getCellIndex(const std::string &name)
+    int getCellIndex(const std::string &name)
     {
         if (locals.size() > 0)
         {
@@ -126,12 +127,22 @@ struct CodeObject : public Object
     }
 };
 
+struct CellObject : public Object
+{
+    CellObject(XPValue value) : Object(ObjectType::CELL), value(value) {}
+    XPValue value;
+};
+
 struct FunctionObject : public Object
 {
     FunctionObject(CodeObject *co) : Object(ObjectType::FUNCTION), co(co) {}
     CodeObject *co;
+
+    std::vector<CellObject*> cells;
 };
 
+#define OBJECT(value) ((XPValue){XPValueType::OBJECT, .object = value})
+#define CELL(cellObject) OBJECT((Object*) cellObject)
 #define NUMBER(value) ((XPValue){XPValueType::NUMBER, .number = value})
 #define BOOLEAN(value) ((XPValue){XPValueType::BOOLEAN, .boolean = value})
 #define ALLOC_STRING(value) \
@@ -144,11 +155,15 @@ struct FunctionObject : public Object
 #define ALLOC_FUNCTION(co) \
     ((XPValue){XPValueType::OBJECT, .object = (Object *)new FunctionObject(co)})
 
+#define ALLOC_CELL(value) \
+    ((XPValue){XPValueType::OBJECT, .object = (Object *)new CellObject(value)})
+
 #define AS_NUMBER(xPValue) ((double)(xPValue).number)
 #define AS_OBJECT(xPValue) ((Object *)(xPValue).object)
 #define AS_BOOLEAN(xPValue) ((bool)(xPValue).boolean)
 #define AS_NATIVE(xPValue) ((NativeObject *)(xPValue).object)
 #define AS_FUNCTION(xPValue) ((FunctionObject *)(xPValue).object)
+#define AS_CELL(xPValue) ((CellObject *)(xPValue).object)
 
 #define AS_STRING(xPValue) ((StringObject *)(xPValue).object)
 #define AS_CODE(xPValue) ((CodeObject *)(xPValue).object)
@@ -165,6 +180,7 @@ struct FunctionObject : public Object
 #define IS_CODE(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::CODE)
 #define IS_NATIVE(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::NATIVE)
 #define IS_FUNCTION(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::FUNCTION)
+#define IS_CELL(xpValue) IS_OBJECT_TYPE(xpValue, ObjectType::CELL)
 
 std::string xpValueToTypeString(const XPValue &value)
 {
@@ -191,6 +207,10 @@ std::string xpValueToTypeString(const XPValue &value)
     else if (IS_FUNCTION(value))
     {
         return "FUNCTION";
+    }
+     else if (IS_CELL(value))
+    {
+        return "CELL";
     }
     else
     {
@@ -229,6 +249,11 @@ std::string xpValueToConstantString(const XPValue &value)
     {
         auto fn = AS_NATIVE(value);
         ss << fn->name << "/" << fn->arity;
+    }
+      else if (IS_CELL(value))
+    {
+        auto cell = AS_CELL(value);
+       ss << "cell " << xpValueToConstantString(cell->value);
     }
     else
     {
