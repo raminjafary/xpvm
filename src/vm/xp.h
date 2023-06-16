@@ -82,6 +82,11 @@ public:
         setGlobalVariables();
     }
 
+    ~XPVM()
+    {
+        Traceable::cleanup();
+    }
+
     void push(const XPValue &value)
     {
         if ((size_t)(sp - stack.begin()) == STACK_LIMIT)

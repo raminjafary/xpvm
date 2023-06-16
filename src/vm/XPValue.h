@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <list>
 #include "../Logger.h"
 
 enum class XPValueType
@@ -21,7 +22,61 @@ enum class ObjectType
     CELL
 };
 
-struct Object
+struct Traceable
+{
+    bool marked;
+
+    size_t size;
+
+    static void *operator new(size_t size)
+    {
+        void *object = ::operator new(size);
+
+        ((Traceable *)object)->size = size;
+
+        Traceable::objects.push_back((Traceable *)object);
+
+        Traceable::bytesAllocated += size;
+
+        return object;
+    }
+
+    static void operator delete(void *object, size_t size)
+    {
+
+        Traceable::bytesAllocated -= size;
+
+        ::operator delete(object);
+    }
+
+    static void cleanup()
+    {
+        for (auto &object : objects)
+        {
+            delete object;
+        }
+        objects.clear();
+    }
+
+    static void printStats()
+    {
+        std::cout << "---------------------------------------\n";
+        std::cout << "Memory stats:\n\n"
+                  << "\n\n";
+        std::cout << "Objects allocated : " << std::dec << Traceable::objects.size() << "\n";
+        std::cout << "Bytes allocated   : " << std::dec << Traceable::bytesAllocated << "\n\n";
+    }
+
+    static size_t bytesAllocated;
+
+    static std::list<Traceable *> objects;
+};
+
+size_t Traceable::bytesAllocated{0};
+
+std::list<Traceable *> Traceable::objects{};
+
+struct Object : public Traceable
 {
     Object(ObjectType type) : type(type) {}
     ObjectType type;
@@ -138,11 +193,11 @@ struct FunctionObject : public Object
     FunctionObject(CodeObject *co) : Object(ObjectType::FUNCTION), co(co) {}
     CodeObject *co;
 
-    std::vector<CellObject*> cells;
+    std::vector<CellObject *> cells;
 };
 
 #define OBJECT(value) ((XPValue){XPValueType::OBJECT, .object = value})
-#define CELL(cellObject) OBJECT((Object*) cellObject)
+#define CELL(cellObject) OBJECT((Object *)cellObject)
 #define NUMBER(value) ((XPValue){XPValueType::NUMBER, .number = value})
 #define BOOLEAN(value) ((XPValue){XPValueType::BOOLEAN, .boolean = value})
 #define ALLOC_STRING(value) \
@@ -208,7 +263,7 @@ std::string xpValueToTypeString(const XPValue &value)
     {
         return "FUNCTION";
     }
-     else if (IS_CELL(value))
+    else if (IS_CELL(value))
     {
         return "CELL";
     }
@@ -250,10 +305,10 @@ std::string xpValueToConstantString(const XPValue &value)
         auto fn = AS_NATIVE(value);
         ss << fn->name << "/" << fn->arity;
     }
-      else if (IS_CELL(value))
+    else if (IS_CELL(value))
     {
         auto cell = AS_CELL(value);
-       ss << "cell " << xpValueToConstantString(cell->value);
+        ss << "cell " << xpValueToConstantString(cell->value);
     }
     else
     {

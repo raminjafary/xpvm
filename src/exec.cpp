@@ -5,9 +5,12 @@
 
 int main(int argc, char const *argv[])
 {
-    XPVM vm;
+    {
+        XPVM vm;
 
-    auto result = vm.exec(R"(
+        Traceable::printStats();
+
+        auto result = vm.exec(R"(
 
         (var x 10)
 
@@ -20,7 +23,6 @@ int main(int argc, char const *argv[])
             (+ y x)
             (begin
                 (var z 200)
-                z
                 (def bar () (+ y z))
                 (bar)
             )
@@ -28,11 +30,16 @@ int main(int argc, char const *argv[])
     
     )");
 
-    // vm.dumpStack();
+        // vm.dumpStack();
 
-    std::cout << "\n";
+        std::cout << "\n";
 
-    log(result);
+        log(result);
+
+        Traceable::printStats();
+    }
+
+    Traceable::printStats();
 
     std::cout << "All Done!\n";
 

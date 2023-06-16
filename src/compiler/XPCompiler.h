@@ -56,6 +56,7 @@ public:
     {
         co = AS_CODE(createCodeObjectValue("main"));
         main = AS_FUNCTION(ALLOC_FUNCTION(co));
+        constantObjects_.insert((Traceable *)main);
 
         analyze(exp, nullptr);
 
@@ -486,6 +487,7 @@ public:
         {
 
             auto fn = ALLOC_FUNCTION(co);
+            constantObjects_.insert((Traceable *)AS_OBJECT(fn));
 
             co = prevCo;
 
@@ -524,6 +526,7 @@ public:
         auto coValue = ALLOC_CODE(name, arity);
         auto co = AS_CODE(coValue);
         codeObjects_.push_back(co);
+        constantObjects_.insert((Traceable *)co);
         return coValue;
     }
 
@@ -536,7 +539,6 @@ public:
     }
 
 private:
-    std::unique_ptr<Disassembler> disassembler;
     size_t getOffset()
     {
         return co->code.size();
@@ -575,6 +577,11 @@ private:
     bool isFunctionBody()
     {
         return co->name != "main" && co->scopeLevel == 1;
+    }
+
+    std::set<Traceable *> &getConstantObjects()
+    {
+        return constantObjects_;
     }
 
     void blockEnter()
@@ -659,7 +666,11 @@ private:
 
     std::vector<CodeObject *> codeObjects_;
 
+    std::set<Traceable *> constantObjects_;
+
     std::shared_ptr<Global> global;
+
+    std::unique_ptr<Disassembler> disassembler;
 
     static std::map<std::string, uint8_t> compareOps;
 };
